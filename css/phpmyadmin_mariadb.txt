@@ -1,0 +1,49 @@
+yum install epel-release mlocate vim
+yum install httpd
+systemctl start httpd
+systemctl enable httpd
+systemctl status httpd
+updatedb
+   https://mariadb.com/resources/blog/installing-mariadb-10-on-centos-7-rhel-7/
+sudo yum install mariadb-server
+yum install wget
+wget https://downloads.mariadb.com/MariaDB/mariadb_repo_setup
+chmod +x mariadb_repo_setup
+sudo ./mariadb_repo_setup
+sudo yum install MariaDB-server
+sudo systemctl start mariadb.service
+yum install zabbix-server-mysql zabbix-agent
+mysql -uroot -p
+      enter password = password
+mysql> create database zabbix character set utf8 collate utf8_bin;
+mysql> create user zabbix@localhost identified by 'password';
+mysql> grant all privileges on zabbix.* to zabbix@localhost;
+mysql> quit;
+getenforce
+setenforce 0
+systemctl start zabbix-server
+systemctl enable zabbix-server
+systemctl status zabbix-server
+systemctl restart zabbix-server
+systemctl restart httpd
+systemctl restart mariadb
+--------------------PHPMYADMIN--------------------------------------------
+sudo yum –y update
+sudo yum -y install phpmyadmin
+yum install php
+systemctl restart httpd
+cd /etc/httpd/conf.d
+vim phpMyAdmin.conf
+    change 127.0.0.1 to System ip(Search what is my ip on internet)
+systemctl restart httpd
+cd /etc/phpMyAdmin
+vim config.inc.php
+systemctl restart httpd
+
+
+-----------------Connecting PHPMYADMIN to MYSQL server --------------------------
+http://VM_ip/phpmyadmin
+	enter user = zabbix
+	      password = password
+
+
