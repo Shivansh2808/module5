@@ -1,0 +1,53 @@
+yum install epel-release mlocate vim
+yum install httpd
+systemctl start httpd
+systemctl enable httpd
+systemctl status httpd
+updatedb
+rpm -ivh https://repo.zabbix.com/zabbix/5.0/rhel/7/x86_64/zabbix-release-5.0-1.el7.noarch.rpm
+yum clean all
+https://mariadb.com/resources/blog/installing-mariadb-10-on-centos-7-rhel-7/
+sudo yum install mariadb-server
+yum install wget
+wget https://downloads.mariadb.com/MariaDB/mariadb_repo_setup
+chmod +x mariadb_repo_setup
+sudo ./mariadb_repo_setup
+sudo yum install MariaDB-server
+sudo systemctl start mariadb.service
+yum install zabbix-server-mysql zabbix-agent
+yum install centos-release-scl
+cd /etc/yum.repos.d/
+vim zabbix.repo
+          frontend
+          enable = 1
+yum install zabbix-web-mysql-scl zabbix-apache-conf-scl
+mysql -uroot -p
+      enter password = password
+mysql> create database zabbix character set utf8 collate utf8_bin;
+mysql> create user zabbix@localhost identified by 'password';
+mysql> grant all privileges on zabbix.* to zabbix@localhost;
+mysql> quit;
+zcat /usr/share/doc/zabbix-server-mysql-5.0.25/create.sql.gz | mysql -uzabbix -p zabbix
+   enter password = password
+cd /etc/zabbix/
+vim zabbix_server.conf
+      uncommnet
+         ListenPort=10051
+         DBHost=localhost
+         DBName=zabbix
+         DBUser=zabbix
+         DBPassword=password
+cd /etc/opt/rh/rh-php72/php-fpm.d
+vim zabbix.conf
+php_value[date.timezone] = Asia/Kolkata
+systemctl restart zabbix-server zabbix-agent httpd rh-php72-php-fpm
+systemctl enable zabbix-server zabbix-agent httpd rh-php72-php-fpm
+getenforce
+setenforce 0
+systemctl start zabbix-server
+systemctl enable zabbix-server
+systemctl status zabbix-server
+systemctl restart zabbix-server
+systemctl restart httpd
+systemctl restart mariadb
+
