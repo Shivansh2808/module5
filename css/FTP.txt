@@ -1,0 +1,44 @@
+yum install epel-release mloacte vim -y
+yum install vsftpd -y
+systemctl start vsftpd
+systemctl enable vsftpd
+yum install firewalld -y
+systemctl start firewalld
+systemctl enable  firewalld
+systemctl status  firewalld
+firewall-cmd --zone=public --permanent --add-port=21/tcp
+firewall-cmd --zone=public --permanent --add-service=ftp
+firewall-cmd --reload
+cd /etc/vsftpd/
+cp /etc/vsftpd/vsftpd.conf /etc/vsftpd/vsftpd.conf.orig
+vim vsftpd.conf
+	anonymous_enable=NO 
+	userlist_file=/etc/vsftpd/user_list
+	userlist_deny=NO
+	(uncomment)chroot_local_user=YES
+yum install ftp -y
+sudo systemctl restart vsftpd
+sudo adduser tyagiji
+sudo passwd tyagiji
+	enter password = tyagiji
+echo "tyagiji" | sudo tee –a /etc/vsftpd/user_list
+cd  /home/tyagiji
+mkdir ftp
+cd ftp
+mkdir upload
+sudo chmod 550 /home/tyagiji/ftp
+sudo chmod 750 /home/tyagiji/ftp/upload
+sudo chown  tyagiji: /home/tyagiji/ftp
+sudo systemctl restart vsftpd
+cd /home/
+chmod 777 tyagiji/
+cd tyagiji/
+chmod 777 ftp
+cd ftp/
+chmod 777 upload/
+ftp VM_IP
+           make a directory , if it is successfull then congratulations
+           check the newly made directory location : cd /home/tyagiji/
+
+
+

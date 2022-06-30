@@ -1,0 +1,8 @@
+yum install epel-release mlocate vim -y
+yum install update -y
+yum install ntp -y
+systemctl restart ntpd
+systemctl enable ntpd
+ntpq -np
+timedatectl
+sudo timedatectl set-timezone Asia/Kolkata
