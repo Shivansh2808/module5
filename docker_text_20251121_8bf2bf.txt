@@ -1,0 +1,260 @@
+
+COMPLETE DOCKER MONITORING SETUP GUIDE
+For ManageEngine APM Manager with On-Prem Server
+
+==================================================
+PREREQUISITES
+==================================================
+
+- On-prem server with Docker running
+- ManageEngine APM Manager installed and accessible
+- Admin access to both systems
+- Network connectivity between APM Manager and on-prem server
+
+==================================================
+PHASE 1: INSTALL REQUIRED TOOLS ON ON-PREM SERVER
+==================================================
+
+STEP 1: Connect to your on-prem server
+- Open SSH terminal or direct console
+- Login with admin credentials
+
+STEP 2: Install socat utility
+- Run this command:
+  sudo yum install socat -y
+
+STEP 3: Verify installation
+- Run these verification commands:
+  which socat
+  socat -V
+
+Expected Result: Both commands should show socat is installed
+
+==================================================
+PHASE 2: SET UP DOCKER TCP PROXY
+==================================================
+
+STEP 4: Create systemd service file
+- Run this command to create the file:
+  sudo vi /etc/systemd/system/docker-tcp-proxy.service
+
+STEP 5: Add service content
+- Press 'i' to enter insert mode
+- Copy and paste exactly this content:
+
+[Unit]
+Description=Docker TCP Proxy on port 2376
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/socat TCP-LISTEN:2376,fork,reuseaddr UNIX-CONNECT:/var/run/docker.sock
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+- Press 'ESC' key
+- Type ':wq'
+- Press 'ENTER' to save and exit
+
+STEP 6: Enable and start the proxy service
+- Run these commands one by one:
+  sudo systemctl daemon-reload
+  sudo systemctl enable docker-tcp-proxy.service
+  sudo systemctl start docker-tcp-proxy.service
+
+STEP 7: Check service status
+- Run this command:
+  sudo systemctl status docker-tcp-proxy.service
+
+Expected Result: Should show "active (running)"
+
+==================================================
+PHASE 3: CONFIGURE FIREWALL
+==================================================
+
+STEP 8: Check firewall status
+- Run this command:
+  sudo firewall-cmd --state
+
+STEP 9: Open port 2376 in firewall
+- Run these commands:
+  sudo firewall-cmd --permanent --add-port=2376/tcp
+  sudo firewall-cmd --reload
+
+==================================================
+PHASE 4: TEST THE SETUP
+==================================================
+
+STEP 10: Test Docker TCP API locally
+- Run this command:
+  curl http://localhost:2376/version
+
+Expected Result: Should show JSON output with Docker version information
+
+STEP 11: Get your server IP address
+- Run this command:
+  ip addr show
+
+Note: Look for your main network interface IP address
+
+STEP 12: Test from APM Manager server (optional)
+- From APM Manager server, run:
+  curl http://YOUR_SERVER_IP:2376/version
+
+Replace YOUR_SERVER_IP with your on-prem server's actual IP
+
+==================================================
+PHASE 5: CONFIGURE APM MANAGER
+==================================================
+
+STEP 13: Access APM Manager Web Console
+- Open web browser
+- Go to: http://YOUR_APM_SERVER_IP:9090
+- Login with admin credentials
+
+STEP 14: Add Docker Monitor
+1. Navigate to: Admin → Add Monitor → Docker
+
+2. Fill in the form with these exact values:
+   - Display Name: Docker-Production-Server
+   - HostName/IP Address: YOUR_ONPREM_SERVER_IP
+     (Use the IP address from Step 11)
+   - Port: 2376
+   - Credential Details: Select "Use below credential"
+   - Username: (leave empty)
+   - Password: (leave empty)
+   - SSL is enabled: (unchecked)
+   - Container Discovery: "Discover and monitor all containers"
+   - Polling Interval: 5 minutes
+
+3. Click "Test Credential" button
+   Expected Result: Should show success message
+
+4. Click "Add Monitor(s)" button
+
+==================================================
+PHASE 6: VERIFY MONITORING IS WORKING
+==================================================
+
+STEP 15: Wait for initial data collection
+- Wait 5-10 minutes after adding the monitor
+
+STEP 16: Check monitor status
+- Go to: Monitors → Docker-Production-Server
+- You should see:
+  ✓ List of all containers
+  ✓ CPU usage graphs
+  ✓ Memory usage graphs
+  ✓ Network I/O statistics
+  ✓ Container status (running/stopped)
+
+STEP 17: Create dashboard (optional)
+- Go to: Dashboard → Create New Dashboard
+- Name: Docker Production Monitoring
+- Add widgets for:
+  - Container status
+  - CPU usage
+  - Memory usage
+  - Network I/O
+
+==================================================
+PHASE 7: ADDITIONAL APPLICATION MONITORING (OPTIONAL)
+==================================================
+
+STEP 18: Monitor your application ports (8095, 8088, etc.)
+For each application port:
+
+1. Go to: Admin → Add Monitor → URL Monitor
+2. Configure:
+   - Display Name: App-Port-8095 (use appropriate name)
+   - URL: http://YOUR_SERVER_IP:8095/
+   - Monitor Type: URL
+3. Click "Add Monitor(s)"
+
+==================================================
+TROUBLESHOOTING GUIDE
+==================================================
+
+PROBLEM: Test Credential fails in APM Manager
+
+SOLUTION:
+1. Check if proxy service is running:
+   sudo systemctl status docker-tcp-proxy.service
+
+2. Check if port 2376 is listening:
+   sudo netstat -tlnp | grep 2376
+
+3. Test locally on on-prem server:
+   curl http://localhost:2376/version
+
+4. Check service logs:
+   sudo journalctl -u docker-tcp-proxy.service -f
+
+PROBLEM: Port 2376 not listening
+
+SOLUTION:
+1. Restart the proxy service:
+   sudo systemctl restart docker-tcp-proxy.service
+
+2. Check if socat is installed:
+   which socat
+
+3. Verify service file permissions:
+   sudo ls -la /etc/systemd/system/docker-tcp-proxy.service
+
+PROBLEM: No containers showing in APM Manager
+
+SOLUTION:
+1. Wait 10-15 minutes for initial discovery
+2. Check if Docker has running containers:
+   docker ps
+3. Verify network connectivity between servers
+
+==================================================
+VERIFICATION CHECKLIST
+==================================================
+
+BEFORE PROCEEDING, VERIFY:
+
+[ ] socat is installed (which socat)
+[ ] Proxy service is running (systemctl status)
+[ ] Port 2376 is listening (netstat -tlnp | grep 2376)
+[ ] Local API test works (curl localhost:2376/version)
+[ ] Firewall allows port 2376
+[ ] APM Manager test credential succeeds
+[ ] Containers appear in APM Manager after 10 minutes
+
+==================================================
+SECURITY NOTES
+==================================================
+
+- Port 2376 is exposed without authentication
+- Consider restricting access to APM Manager IP only
+- Monitor this port for unauthorized access
+- This setup is for internal networks only
+
+==================================================
+MAINTENANCE
+==================================================
+
+- The proxy service will auto-start on server reboot
+- To stop monitoring: sudo systemctl stop docker-tcp-proxy.service
+- To disable permanently: sudo systemctl disable docker-tcp-proxy.service
+- To remove completely: sudo systemctl stop docker-tcp-proxy.service && sudo rm /etc/systemd/system/docker-tcp-proxy.service
+
+==================================================
+SUPPORT
+==================================================
+
+If you encounter issues:
+1. Check all verification steps above
+2. Ensure no typos in service file
+3. Verify IP addresses are correct
+4. Check network connectivity between servers
+5. Review APM Manager logs for errors
+
+END OF DOCUMENT
